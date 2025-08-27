@@ -36,3 +36,7 @@ export const ALL_ROLES: AllRolesMap = {
 	credential: mapToRoleObject(CREDENTIALS_SHARING_SCOPE_MAP),
 	workflow: mapToRoleObject(WORKFLOW_SHARING_SCOPE_MAP),
 };
+
+export const isBuiltInRole = (role: string): role is AllRoleTypes => {
+	return role in ROLE_NAMES;
+};

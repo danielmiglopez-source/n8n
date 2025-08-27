@@ -13,7 +13,12 @@ import {
 } from '@n8n/db';
 import { Service } from '@n8n/di';
 import type { Scope } from '@n8n/permissions';
-import { combineScopes, getAuthPrincipalScopes, getRoleScopes } from '@n8n/permissions';
+import {
+	combineScopes,
+	getAuthPrincipalScopes,
+	getRoleScopes,
+	isBuiltInRole,
+} from '@n8n/permissions';
 import { UnexpectedError } from 'n8n-workflow';
 
 import { License } from '@/license';
@@ -33,7 +38,7 @@ export class RoleService {
 		return {
 			...role,
 			scopes: role.scopes.map((s) => s.slug),
-			licensed: this.isRoleLicensed(role),
+			licensed: this.isRoleLicensed(role.slug),
 		};
 	}
 
@@ -201,17 +206,17 @@ export class RoleService {
 		return [...scopesSet].sort();
 	}
 
-	isRoleLicensed(role: Role) {
+	isRoleLicensed(role: string) {
 		// TODO: move this info into FrontendSettings
 
-		if (!role.systemRole) {
+		if (!isBuiltInRole(role)) {
 			// This is a custom role, there for we need to check if
 			// custom roles are licensed
 			// TODO: add license check for custom roles
 			return true;
 		}
 
-		switch (role.slug) {
+		switch (role) {
 			case 'project:admin':
 				return this.license.isProjectRoleAdminLicensed();
 			case 'project:editor':

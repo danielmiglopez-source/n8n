@@ -17,7 +17,9 @@ import { combineScopes, getAuthPrincipalScopes, getRoleScopes } from '@n8n/permi
 import { UnexpectedError } from 'n8n-workflow';
 
 import { License } from '@/license';
-import { CreateRoleDto, UpdateRoleDto } from '@n8n/api-types';
+import { CreateRoleDto, RoleDTO, UpdateRoleDto } from '@n8n/api-types';
+import { NotFoundError } from '@/errors/response-errors/not-found.error';
+import { BadRequestError } from '@/errors/response-errors/bad-request.error';
 
 @Service()
 export class RoleService {
@@ -27,29 +29,37 @@ export class RoleService {
 		private readonly scopeRepository: ScopeRepository,
 	) {}
 
-	async getAllRoles() {
-		const roles = await this.roleRepository.findAll();
-		return roles.map((r) => {
-			return {
-				...r,
-				licensed: this.isRoleLicensed(r),
-			};
-		});
+	private dbRoleToRoleDTO(role: Role): RoleDTO {
+		return {
+			...role,
+			scopes: role.scopes.map((s) => s.slug),
+			licensed: this.isRoleLicensed(role),
+		};
 	}
 
-	async getRole(slug: string) {
-		return await this.roleRepository.findBySlug(slug);
+	async getAllRoles(): Promise<RoleDTO[]> {
+		const roles = await this.roleRepository.findAll();
+		return roles.map((r) => this.dbRoleToRoleDTO(r));
+	}
+
+	async getRole(slug: string): Promise<RoleDTO> {
+		const role = await this.roleRepository.findBySlug(slug);
+		if (role) {
+			return this.dbRoleToRoleDTO(role);
+		}
+		throw new NotFoundError('Role not found');
 	}
 
 	async removeCustomRole(slug: string) {
 		const role = await this.roleRepository.findBySlug(slug);
 		if (!role) {
-			throw new Error('Role not found');
+			throw new NotFoundError('Role not found');
 		}
 		if (role.systemRole) {
-			throw new Error('Cannot delete system roles');
+			throw new BadRequestError('Cannot delete system roles');
 		}
-		return await this.roleRepository.removeBySlug(slug);
+		await this.roleRepository.removeBySlug(slug);
+		return this.dbRoleToRoleDTO(role);
 	}
 
 	private async resolveScopes(scopeSlugs: string[] | undefined): Promise<DBScope[] | undefined> {
@@ -73,19 +83,21 @@ export class RoleService {
 	async updateCustomRole(slug: string, newData: UpdateRoleDto) {
 		const role = await this.roleRepository.findBySlug(slug);
 		if (!role) {
-			throw new Error('Role not found');
+			throw new NotFoundError('Role not found');
 		}
 		if (role.systemRole) {
-			throw new Error('Cannot update system roles');
+			throw new BadRequestError('Cannot update system roles');
 		}
 
 		const { displayName, description, scopes: scopeSlugs } = newData;
 
-		return await this.roleRepository.updateRole(slug, {
+		const updatedRole = await this.roleRepository.updateRole(slug, {
 			displayName,
 			description,
 			scopes: await this.resolveScopes(scopeSlugs),
 		});
+
+		return this.dbRoleToRoleDTO(updatedRole);
 	}
 
 	async createCustomRole(newRole: CreateRoleDto) {
@@ -95,12 +107,13 @@ export class RoleService {
 			role.description = newRole.description;
 		}
 		const scopes = await this.resolveScopes(newRole.scopes);
-		if (scopes === undefined) throw new Error('Scopes are required');
+		if (scopes === undefined) throw new BadRequestError('Scopes are required');
 		role.scopes = scopes;
 		role.systemRole = false;
 		role.roleType = newRole.roleType;
 		role.slug = `${newRole.roleType}:${newRole.displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-		return await this.roleRepository.save(role);
+		const createdRole = await this.roleRepository.save(role);
+		return this.dbRoleToRoleDTO(createdRole);
 	}
 
 	addScopes(

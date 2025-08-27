@@ -80,6 +80,7 @@ export {
 
 export { UpdateRoleDto } from './roles/update-role.dto';
 export { CreateRoleDto } from './roles/create-role.dto';
+export { DeleteRoleDto } from './roles/delete-role.dto';
 
 export { OidcConfigDto } from './oidc/config.dto';
 

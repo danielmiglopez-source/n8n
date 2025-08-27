@@ -3,6 +3,7 @@ import { DataSource, EntityManager, Repository } from '@n8n/typeorm';
 
 import { Role } from '../entities';
 import { DatabaseConfig } from '@n8n/config';
+import { FileNotFoundError } from 'n8n-core';
 
 @Service()
 export class RoleRepository extends Repository<Role> {
@@ -22,7 +23,10 @@ export class RoleRepository extends Repository<Role> {
 	}
 
 	async removeBySlug(slug: string) {
-		return await this.delete({ slug });
+		const result = await this.delete({ slug });
+		if (result.affected !== 1) {
+			throw new Error(`Failed to delete role "${slug}"`);
+		}
 	}
 
 	private async updateEntityWithManager(

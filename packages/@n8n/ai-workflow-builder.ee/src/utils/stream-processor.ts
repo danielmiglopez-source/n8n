@@ -37,14 +37,14 @@ export function processStreamChunk(streamMode: string, chunk: unknown): StreamOu
 				workflowJSON?: unknown;
 				workflowOperations?: unknown;
 			};
-			createPlan?: {
+			create_plan?: {
 				workflowPlan?: unknown;
 				planStatus?: string;
 			};
-			reviewPlan?: {
+			review_plan?: {
 				planStatus?: string;
 			};
-			adjustPlan?: {
+			adjust_plan?: {
 				workflowPlan?: unknown;
 				planStatus?: string;
 			};
@@ -104,8 +104,8 @@ export function processStreamChunk(streamMode: string, chunk: unknown): StreamOu
 		}
 
 		// Handle plan creation
-		if (agentChunk?.createPlan?.workflowPlan) {
-			const workflowPlan = agentChunk.createPlan.workflowPlan as WorkflowPlan;
+		if (agentChunk?.create_plan?.workflowPlan) {
+			const workflowPlan = agentChunk.create_plan.workflowPlan as WorkflowPlan;
 			const planChunk = {
 				role: 'assistant' as const,
 				type: 'plan' as const,
@@ -115,8 +115,8 @@ export function processStreamChunk(streamMode: string, chunk: unknown): StreamOu
 			return { messages: [planChunk] };
 		}
 
-		if (agentChunk?.adjustPlan?.workflowPlan) {
-			const workflowPlan = agentChunk.adjustPlan.workflowPlan as WorkflowPlan;
+		if (agentChunk?.adjust_plan?.workflowPlan) {
+			const workflowPlan = agentChunk.adjust_plan.workflowPlan as WorkflowPlan;
 			const planChunk = {
 				role: 'assistant' as const,
 				type: 'plan' as const,
